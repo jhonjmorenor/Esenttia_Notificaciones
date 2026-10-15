@@ -266,7 +266,15 @@ export function parseExcelFile(
       if (normTarget === 'FECHA DESPACHO' && (normKey === 'FECHA DESPACHO' || normKey.startsWith('FECHA DESPAC') || normKey.includes('DESPACH'))) {
         return idx < row.length ? row[idx] : '';
       }
-      if (normTarget === 'CORREO_CC_FIJO' && (normKey === 'CORREO_CC_FIJO' || normKey === 'CORREO CC FIJO')) {
+      if (
+        normTarget === 'CORREO_CC_FIJO' &&
+        (normKey === 'CORREO_CC_FIJO' ||
+          normKey === 'CORREO CC FIJO' ||
+          normKey === 'CORREO CC' ||
+          normKey === 'CORREO CC ADICIONAL' ||
+          normKey === 'CORREO RESPALDO' ||
+          normKey === 'CC')
+      ) {
         return idx < row.length ? row[idx] : '';
       }
       if (normKey === normTarget) {
@@ -315,7 +323,14 @@ export function parseExcelFile(
       const nomComercial = String(getVal(r, 'NOMBRE COMERCIAL') || '').trim();
       const correoComercial = String(getVal(r, 'CORREO COMERCIAL') || '').trim();
       // From Excel data as requested:
-      const correoCcFijo = String(getVal(r, 'CORREO_CC_FIJO') || '').trim();
+      const correoCcFijo = String(
+        getVal(r, 'CORREO_CC_FIJO') ||
+        getVal(r, 'CORREO CC') ||
+        getVal(r, 'CC') ||
+        getVal(r, 'CORREO RESPALDO') ||
+        getVal(r, 'CORREO CC ADICIONAL') ||
+        ''
+      ).trim();
       const asunto = String(getVal(r, 'ASUNTO') || '')
         .replace(/^Asunto:\s*/i, '')
         .trim();
@@ -422,8 +437,8 @@ export function parseExcelFile(
           }
         });
 
-        // CC recipients from Correo Comercial, fixed CC (jhon.moreno@konecta.com) & any custom CC
-        [r.correoComercial, 'jhon.moreno@konecta.com', r.correoCcFijo].forEach((raw) => {
+        // CC recipients strictly from the Excel file (Correo Comercial and any CC column in the file)
+        [r.correoComercial, r.correoCcFijo].forEach((raw) => {
           if (raw) {
             raw
               .split(/[;,]/)
