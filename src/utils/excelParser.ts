@@ -506,9 +506,9 @@ export function parseExcelFile(
   };
 }
 
-export function generateSampleExcelData(type: ProcessType = 'fechas'): Uint8Array {
+export function generateSampleExcelData(type: ProcessType = 'fechas'): ArrayBuffer {
   if (type === 'vip') {
-    // Exact schema and sample from the user's VIP image!
+    // Exact 19-column schema and sample from the user's VIP script
     const sampleHeaders = REQUIRED_COLUMNS_VIP;
     const sampleData = [
       sampleHeaders,
@@ -531,7 +531,6 @@ export function generateSampleExcelData(type: ProcessType = 'fechas'): Uint8Arra
         'operaciones@ajover.com',
         'Maria Gomez',
         'ejecutivo.comercial@esenttia.co',
-        'jhon.moreno@konecta.com', // CORREO_CC_FIJO from Excel data as requested!
         'ESENTTIA: Actualización de pedidos VIP - AJOVER DARNEL S.A.S',
       ],
       [
@@ -553,7 +552,6 @@ export function generateSampleExcelData(type: ProcessType = 'fechas'): Uint8Arra
         '',
         'Maria Gomez',
         'ejecutivo.comercial@esenttia.co',
-        'jhon.moreno@konecta.com',
         'ESENTTIA: Actualización de pedidos VIP - AJOVER DARNEL S.A.S',
       ],
       [
@@ -575,7 +573,6 @@ export function generateSampleExcelData(type: ProcessType = 'fechas'): Uint8Arra
         '',
         'Andres Perez',
         'andres.perez@esenttia.co',
-        'jhon.moreno@konecta.com',
         'ESENTTIA: Notificación Estatus Pedido VIP',
       ],
     ];
@@ -600,13 +597,12 @@ export function generateSampleExcelData(type: ProcessType = 'fechas'): Uint8Arra
       { wch: 30 }, // Correo Contacto 2
       { wch: 20 }, // Nombre Comercial
       { wch: 30 }, // Correo Comercial
-      { wch: 30 }, // CORREO_CC_FIJO
       { wch: 55 }, // Asunto
     ];
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Data_Envio_VIP');
-    return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+    return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
   }
 
   if (type === 'despachados') {
@@ -655,7 +651,7 @@ export function generateSampleExcelData(type: ProcessType = 'fechas'): Uint8Arra
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Data_Envio_Despachado');
-    return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+    return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
   }
 
   if (type === 'pendientes') {
@@ -701,7 +697,7 @@ export function generateSampleExcelData(type: ProcessType = 'fechas'): Uint8Arra
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Data_Envio_Pendientes');
-    return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+    return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
   }
 
   // Fechas template
@@ -750,7 +746,35 @@ export function generateSampleExcelData(type: ProcessType = 'fechas'): Uint8Arra
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Data_Envio_Fechas');
-  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+}
+
+/**
+ * Downloads a pristine, 100% valid Excel template file for the given process.
+ * Uses native Blob construction from the generated ArrayBuffer.
+ */
+export function downloadTemplateExcel(type: ProcessType): void {
+  const fileName =
+    type === 'vip'
+      ? 'Plantilla_Envio_VIP_Esenttia.xlsx'
+      : type === 'despachados'
+      ? 'Plantilla_Envio_Despachado_Esenttia.xlsx'
+      : type === 'pendientes'
+      ? 'Plantilla_Envio_Pendientes_Esenttia.xlsx'
+      : 'Plantilla_Envio_Fechas_Esenttia.xlsx';
+
+  const buffer = generateSampleExcelData(type);
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function exportReportToExcel(report: SendReportItem[], processType?: ProcessType): void {

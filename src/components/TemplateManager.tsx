@@ -5,7 +5,7 @@ import {
   REQUIRED_COLUMNS_PENDIENTES,
   REQUIRED_COLUMNS_DESPACHADOS,
   REQUIRED_COLUMNS_VIP,
-  generateSampleExcelData,
+  downloadTemplateExcel,
 } from '../utils/excelParser';
 import {
   TEMPLATE_FECHAS,
@@ -38,24 +38,7 @@ export const TemplateManager: React.FC<TemplateManagerProps> = ({
   onOpenCustomizer,
 }) => {
   const handleDownload = (type: ProcessType) => {
-    const buffer = generateSampleExcelData(type);
-    const blob = new Blob([buffer.buffer as ArrayBuffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    if (type === 'vip') {
-      a.download = 'Plantilla_Data_Envio_VIP_Act.xlsx';
-    } else if (type === 'despachados') {
-      a.download = 'Plantilla_Data_Envio_Despachado_Act.xlsx';
-    } else if (type === 'pendientes') {
-      a.download = 'Plantilla_Data_Envio_Pendientes_Act.xlsx';
-    } else {
-      a.download = 'Plantilla_Data_Envio_Fechas_Act.xlsx';
-    }
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadTemplateExcel(type);
   };
 
   const templatesList = [

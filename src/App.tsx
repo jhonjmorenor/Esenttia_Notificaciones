@@ -178,7 +178,7 @@ export default function App() {
         : type === 'pendientes'
         ? 'Data_Envio_Pendientes_Act.xlsx'
         : 'Data_Envio_Fechas_Act.xlsx';
-    handleFileLoaded(sampleBuffer.buffer as ArrayBuffer, sampleName, type);
+    handleFileLoaded(sampleBuffer, sampleName, type);
   };
 
   // Preload initial sample on first launch if empty
