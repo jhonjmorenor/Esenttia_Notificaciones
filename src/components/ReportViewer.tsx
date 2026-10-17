@@ -9,6 +9,7 @@ import {
   Clock,
   FileSpreadsheet,
   Trash2,
+  Mail,
 } from 'lucide-react';
 
 interface ReportViewerProps {
@@ -16,6 +17,7 @@ interface ReportViewerProps {
   onClearReports: () => void;
   onGoToUpload: () => void;
   activeProcess: ProcessType;
+  onOpenSendReportModal: () => void;
 }
 
 export const ReportViewer: React.FC<ReportViewerProps> = ({
@@ -23,6 +25,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
   onClearReports,
   onGoToUpload,
   activeProcess,
+  onOpenSendReportModal,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -58,7 +61,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {reports.length > 0 && (
             <>
               <button
@@ -78,6 +81,15 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
               >
                 <Download className="w-4 h-4" />
                 Descargar Reporte Excel (.xlsx)
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenSendReportModal}
+                className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-xs"
+              >
+                <Mail className="w-4 h-4" />
+                Enviar Informe por Correo
               </button>
             </>
           )}

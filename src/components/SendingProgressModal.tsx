@@ -12,6 +12,7 @@ import {
   Clock,
   Send,
   X,
+  Mail,
 } from 'lucide-react';
 import { exportReportToExcel } from '../utils/excelParser';
 
@@ -38,6 +39,7 @@ interface SendingProgressModalProps {
   onViewReportsTab: () => void;
   isTestMode: boolean;
   activeProcess: import('../types/mail').ProcessType;
+  onOpenSendReportModal: () => void;
 }
 
 export const SendingProgressModal: React.FC<SendingProgressModalProps> = ({
@@ -56,6 +58,7 @@ export const SendingProgressModal: React.FC<SendingProgressModalProps> = ({
   onViewReportsTab,
   isTestMode,
   activeProcess,
+  onOpenSendReportModal,
 }) => {
   if (!isOpen) return null;
 

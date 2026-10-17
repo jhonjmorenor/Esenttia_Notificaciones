@@ -161,6 +161,105 @@ async function bootstrap() {
     }
   });
 
+  // Send Consolidated Report by Email with attached Excel (.xlsx)
+  app.post('/api/send-report-email', async (req: Request, res: Response) => {
+    const {
+      smtp,
+      to,
+      cc,
+      subject,
+      html,
+      excelBase64,
+      excelFileName,
+      isTestMode,
+    } = req.body;
+
+    if (isTestMode) {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      return res.json({
+        success: true,
+        simulated: true,
+        message: 'Informe simulado enviado satisfactoriamente (Modo Prueba activo).',
+        recipient: to,
+        attachment: excelFileName || 'Reporte_Envios.xlsx',
+      });
+    }
+
+    if (!smtp || !smtp.host || !smtp.user || !smtp.password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Faltan credenciales del servidor SMTP para el despacho del informe.',
+      });
+    }
+
+    if (!to || (Array.isArray(to) && to.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe especificar al menos un destinatario (Para/To).',
+      });
+    }
+
+    try {
+      const transporter = nodemailer.createTransport({
+        host: String(smtp.host).trim(),
+        port: Number(smtp.port) || 587,
+        secure: Boolean(smtp.secure),
+        auth: {
+          user: String(smtp.user).trim(),
+          pass: String(smtp.password).trim(),
+        },
+        tls: {
+          rejectUnauthorized: false,
+        },
+      });
+
+      const attachments: any[] = [];
+
+      // Attach Excel report if provided
+      if (excelBase64 && typeof excelBase64 === 'string') {
+        attachments.push({
+          filename: excelFileName || 'Reporte_Envios.xlsx',
+          content: Buffer.from(excelBase64, 'base64'),
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+      }
+
+      // Default logo signature if present
+      const defaultDiskImg = path.resolve(__dirname, 'src/assets/images/esenttia_footer_signature_1792078674418.jpg');
+      if (fs.existsSync(defaultDiskImg)) {
+        attachments.push({
+          filename: 'logo_esenttia.jpg',
+          content: fs.readFileSync(defaultDiskImg),
+          cid: 'logo_esenttia',
+        });
+      }
+
+      const mailOptions = {
+        from: `"${smtp.senderName || 'Servicio al Cliente - Esenttia'}" <${smtp.user.trim()}>`,
+        to: Array.isArray(to) ? to.join(', ') : to,
+        cc: Array.isArray(cc) && cc.length > 0 ? cc.join(', ') : undefined,
+        subject: subject || 'Reporte Oficial de Envíos de Correos - Esenttia',
+        html,
+        attachments,
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+
+      return res.json({
+        success: true,
+        messageId: info.messageId,
+        message: 'Informe enviado satisfactoriamente por correo con el archivo Excel adjunto.',
+        accepted: info.accepted,
+      });
+    } catch (err: unknown) {
+      const error = err as Error;
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Error al enviar el reporte por correo.',
+      });
+    }
+  });
+
   // Vite middleware in dev or static files in production
   if (!isProduction) {
     const vite = await createViteServer({

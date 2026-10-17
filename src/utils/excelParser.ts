@@ -792,7 +792,7 @@ export function downloadTemplateExcel(type: ProcessType): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function exportReportToExcel(report: SendReportItem[], processType?: ProcessType): void {
+export function buildReportExcel(report: SendReportItem[], processType?: ProcessType): { wb: XLSX.WorkBook; fileName: string } {
   const isVip = processType === 'vip' || report.some((r) => r.PROCESO === 'vip');
 
   const headers = isVip
@@ -880,5 +880,16 @@ export function exportReportToExcel(report: SendReportItem[], processType?: Proc
     fileName = `Reporte_Envios_Pendiente_${dateStr}.xlsx`;
   }
 
+  return { wb, fileName };
+}
+
+export function generateReportExcelBase64(report: SendReportItem[], processType?: ProcessType): { base64: string; fileName: string } {
+  const { wb, fileName } = buildReportExcel(report, processType);
+  const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' }) as string;
+  return { base64, fileName };
+}
+
+export function exportReportToExcel(report: SendReportItem[], processType?: ProcessType): void {
+  const { wb, fileName } = buildReportExcel(report, processType);
   XLSX.writeFile(wb, fileName);
 }

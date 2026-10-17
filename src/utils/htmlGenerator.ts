@@ -1,4 +1,4 @@
-import { ClientGroup, EmailTemplateConfig, ProcessType } from '../types/mail';
+import { ClientGroup, EmailTemplateConfig, ProcessType, SendReportItem } from '../types/mail';
 import { DEFAULT_ESENTTIA_BANNER } from '../assets/bannerData';
 
 export const TEMPLATE_FECHAS: EmailTemplateConfig = {
@@ -336,6 +336,159 @@ export function generateEmailHtml(
     ${config.supportChannels.phone ? `<li>Línea telefónica: <b>${escapeHtml(config.supportChannels.phone)}</b></li>` : ''}
     ${config.supportChannels.email ? `<li>Correo electrónico: <a href="mailto:${escapeHtml(config.supportChannels.email)}" style="color: #0056b3; text-decoration: none;">${escapeHtml(config.supportChannels.email)}</a></li>` : ''}
   </ul>
+
+  ${imageTag}
+
+</body>
+</html>`;
+}
+
+export function generateReportEmailHtml(
+  reports: SendReportItem[],
+  processType: ProcessType,
+  notes?: string,
+  mode: 'smtp' | 'preview' = 'smtp'
+): string {
+  const processNames: Record<ProcessType, string> = {
+    fechas: 'Fechas de Disponibilidad',
+    pendientes: 'Pendientes de Asignación',
+    despachados: 'Pedidos Despachados',
+    vip: 'Clientes VIP (Estatus Integral)',
+  };
+
+  const processName = processNames[processType] || processType.toUpperCase();
+  const now = new Date();
+  const dateFormatted = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const total = reports.length;
+  const sentCount = reports.filter((r) => r.ESTADO === 'ENVIADO' || r.ESTADO === 'PRUEBA').length;
+  const missingCount = reports.filter((r) => r.ESTADO === 'SIN CORREO').length;
+  const errorCount = reports.filter((r) => r.ESTADO === 'ERROR').length;
+
+  const notesHtml = notes && notes.trim()
+    ? `<div style="margin: 0 0 20px 0; padding: 14px 18px; background-color: #f8fafc; border-left: 4px solid #003366; border-radius: 4px; font-size: 10.5pt; color: #334155;">
+        <strong style="color: #0f172a;">Observaciones del despacho:</strong><br />
+        ${escapeHtml(notes).replace(/\n/g, '<br />')}
+      </div>`
+    : '';
+
+  const tableRows = reports.map((r) => {
+    let statusBg = '#dcfce7';
+    let statusColor = '#15803d';
+    let statusText = r.ESTADO;
+
+    if (r.ESTADO === 'SIN CORREO') {
+      statusBg = '#fef3c7';
+      statusColor = '#b45309';
+    } else if (r.ESTADO === 'ERROR') {
+      statusBg = '#fee2e2';
+      statusColor = '#b91c1c';
+    }
+
+    const regCount = r.TOTAL_FILAS || r.TOTAL_PEDIDOS || 1;
+    const detailOrError = r.ERROR || (r.ESTADO === 'SIN CORREO' ? 'Sin correo de contacto' : 'Notificación generada');
+
+    return `
+      <tr style="border-bottom: 1px solid #e2e8f0; font-size: 9.5pt;">
+        <td style="padding: 8px 10px; font-weight: bold; color: #0f172a;">${escapeHtml(r.CLIENTE)}</td>
+        <td style="padding: 8px 10px; color: #334155;">${escapeHtml(r.CORREOS) || '<span style="color: #94a3b8; font-style: italic;">Sin correo</span>'}</td>
+        <td style="padding: 8px 10px; color: #64748b;">${escapeHtml(r.CC) || '-'}</td>
+        <td style="padding: 8px 10px; text-align: center; color: #334155;">${regCount}</td>
+        <td style="padding: 8px 10px; text-align: center;">
+          <span style="display: inline-block; padding: 3px 8px; border-radius: 9999px; font-size: 8.5pt; font-weight: bold; background-color: ${statusBg}; color: ${statusColor};">
+            ${escapeHtml(statusText)}
+          </span>
+        </td>
+        <td style="padding: 8px 10px; color: #475569; font-size: 9pt;">${escapeHtml(detailOrError)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const imageSrc = mode === 'smtp' ? 'cid:logo_esenttia' : DEFAULT_ESENTTIA_BANNER;
+  const imageTag = `<img src="${imageSrc}" alt="Esenttia" style="max-width: 650px; width: 100%; height: auto; display: block; margin-top: 24px; border: 0;" />`;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Reporte de Envíos - ${escapeHtml(processName)}</title>
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; color: #1e293b; background-color: #ffffff; margin: 0; padding: 16px; line-height: 1.5;">
+
+  <!-- Header Card -->
+  <div style="background-color: #003366; color: #ffffff; padding: 20px 24px; border-radius: 8px; margin-bottom: 24px;">
+    <div style="font-size: 10pt; text-transform: uppercase; letter-spacing: 1px; color: #93c5fd; font-weight: bold;">
+      Auditoría y Trazabilidad de Notificaciones · Esenttia
+    </div>
+    <h1 style="margin: 6px 0 0 0; font-size: 18pt; font-weight: bold; color: #ffffff;">
+      Reporte Oficial de Envíos de Correos
+    </h1>
+    <div style="margin-top: 8px; font-size: 10pt; color: #e2e8f0;">
+      Proceso: <strong>${escapeHtml(processName)}</strong> &nbsp;|&nbsp; Fecha y hora de generación: <strong>${escapeHtml(dateFormatted)}</strong>
+    </div>
+  </div>
+
+  <p style="margin: 0 0 16px 0; font-size: 11pt;">
+    Buen día,
+  </p>
+
+  <p style="margin: 0 0 20px 0; font-size: 11pt;">
+    A continuación se presenta el informe ejecutivo consolidado correspondiente a las notificaciones procesadas para el flujo de <strong>${escapeHtml(processName)}</strong>.
+  </p>
+
+  ${notesHtml}
+
+  <!-- KPI Metrics Boxes -->
+  <table cellpadding="0" cellspacing="8" style="width: 100%; margin-bottom: 24px; border-collapse: separate;">
+    <tr>
+      <td style="width: 25%; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; text-align: center;">
+        <div style="font-size: 9.5pt; color: #475569; font-weight: bold;">Total Procesados</div>
+        <div style="font-size: 18pt; font-weight: bold; color: #0f172a; margin-top: 4px;">${total}</div>
+      </td>
+      <td style="width: 25%; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; text-align: center;">
+        <div style="font-size: 9.5pt; color: #166534; font-weight: bold;">Exitosos / Simulados</div>
+        <div style="font-size: 18pt; font-weight: bold; color: #15803d; margin-top: 4px;">${sentCount}</div>
+      </td>
+      <td style="width: 25%; background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px; text-align: center;">
+        <div style="font-size: 9.5pt; color: #92400e; font-weight: bold;">Sin Correo (Omitidos)</div>
+        <div style="font-size: 18pt; font-weight: bold; color: #b45309; margin-top: 4px;">${missingCount}</div>
+      </td>
+      <td style="width: 25%; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 14px; text-align: center;">
+        <div style="font-size: 9.5pt; color: #991b1b; font-weight: bold;">Con Error</div>
+        <div style="font-size: 18pt; font-weight: bold; color: #b91c1c; margin-top: 4px;">${errorCount}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Consolidated Records Table -->
+  <table
+    border="1"
+    cellpadding="7"
+    style="border-collapse: collapse; width: 100%; border: 1px solid #cbd5e1; margin-bottom: 24px;"
+  >
+    <thead>
+      <tr style="background-color: #003366; color: #ffffff; text-align: left; font-size: 9.5pt;">
+        <th style="padding: 10px; width: 24%;">Cliente</th>
+        <th style="padding: 10px; width: 22%;">Destinatario(s)</th>
+        <th style="padding: 10px; width: 18%;">En Copia (CC)</th>
+        <th style="padding: 10px; width: 8%; text-align: center;">Reg.</th>
+        <th style="padding: 10px; width: 12%; text-align: center;">Estado</th>
+        <th style="padding: 10px; width: 16%;">Detalle / Observación</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${tableRows}
+    </tbody>
+  </table>
+
+  <!-- Attachment notice banner -->
+  <div style="margin: 0 0 24px 0; padding: 14px 18px; background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; font-size: 10.5pt; color: #166534;">
+    <strong>📎 Archivo Excel adjunto:</strong> Se adjunta a este correo el informe oficial consolidado en formato Microsoft Excel (<code>.xlsx</code>) con todas las columnas auditables de cada cliente.
+  </div>
+
+  <p style="margin: 0 0 16px 0; font-size: 10.5pt; color: #475569;">
+    Este correo fue generado automáticamente por la plataforma <strong>AutoMail Express</strong> de Esenttia.
+  </p>
 
   ${imageTag}
 
